@@ -31,7 +31,18 @@
 void setup();
 void loop();
 void initializeSlave();
+void processMessage(String *newMessage);
 
+
+
+/* ######## Definitions ######## */
+#define SIZE 15
+
+
+
+/* ##### Global Variables ###### */
+int byteIn;
+String message;
 
 
 /* ##### Arduino Functions ##### */
@@ -41,14 +52,40 @@ void setup(){
 
 void loop(){
   
+  // Verify if there is 'something' in Serial.
+  if (Serial.available() > 0){
+    message = Serial.readStringUntil('\n');
+  }
+  
+  // If a message arrive, then process it.
+  if(message != ""){
+    processMessage(&message);
+  }
 }
 
 
 
-/* ##### Other Functions ##### */
+/* ###### Other Functions ###### */
+
+/* 
+ * This funcion initialize the things that are necessary to the Slave.
+ * No parameters.
+ */
 void initializeSlave(){
   // Initialize the serial port at 9600 baud.
   Serial.begin(9600);
   
   // Set pins to transmit/receive data.
+}
+
+/* 
+ * This funcion process the message received by the Slave.
+ * Parameters:
+ *  String *newMessage = pointer for the received message.
+ */
+void processMessage(String *newMessage){
+  // Simple example to what to do with the Received String.
+  Serial.print("Received: ");
+  Serial.println(*newMessage);
+  *newMessage = "";
 }

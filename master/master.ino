@@ -26,11 +26,19 @@
       
 */
 
-/* ##### Functions Prototypes ##### */
+/* #### Functions Prototypes ### */
 void setup();
 void loop();
 void initializeMaster();
 void processReceivedData();
+
+
+
+/* ######## Definitions ######## */
+
+
+
+/* ##### Global Variables ###### */
 
 
 
@@ -45,7 +53,12 @@ void loop(){
 
 
 
-/* ##### Other Functions ##### */
+/* ###### Other Functions ###### */
+
+/* 
+ * This funcion initialize the things that are necessary to the Master.
+ * No parameters.
+ */
 void initializeMaster(){
   // Initialize the serial port at 9600 baud.
   Serial.begin(9600);
