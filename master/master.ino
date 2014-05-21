@@ -30,6 +30,7 @@
 void setup();
 void loop();
 void initializeMaster();
+void processReceivedData();
 
 
 
