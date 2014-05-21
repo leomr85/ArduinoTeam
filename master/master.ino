@@ -54,5 +54,5 @@ void initializeMaster(){
 }
 
 void processReceivedData(){
-  // Do something with the data: Fusion/Aggre
+  // Do something with the data: Fusion/Aggregation
 }
