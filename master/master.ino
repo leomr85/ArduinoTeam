@@ -52,3 +52,7 @@ void initializeMaster(){
   
   // Set pins to transmit/receive data.
 }
+
+void processReceivedData(){
+  // Do something with the data: Fusion/Aggre
+}
