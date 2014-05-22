@@ -27,7 +27,14 @@
 */
 
 
-/* ##### Functions Prototypes ##### */
+/* ######### Includes ########## */
+#include <avr/sleep.h>
+#include <avr/power.h>
+#include <avr/wdt.h>
+
+
+
+/* #### Functions Prototypes ### */
 void setup();
 void loop();
 void initializeSlave();
@@ -90,11 +97,24 @@ int processMessage(String *newMessage){
   
   // Verify if the message is a Request to Sleep.
   if(*newMessage == "req_sleepm"){
+    // Notify the Master the reception of a sleep message.
     Serial.print("Received: ");
     Serial.println(*newMessage);
-    cleanString(newMessage);
-    // Notify the Master the reception of a sleep message.
-    // The slave should sleep here.
+    Serial.flush();
+    cleanString(newMessage);    
+    
+    // The slave should sleep here...
+    // Select the watchdog timer mode
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);    
+    MCUSR &= ~(1 << WDRF);                           // reset status flag
+    WDTCSR |= (1 << WDCE) | (1 << WDE);              // enable configuration changes
+    WDTCSR = (1 << WDP0) | (1 << WDP1) | (1 << WDP2) | (1 << WDP3); // set the prescalar = 9 (~10s)
+    WDTCSR |= (1 << WDIE);                           // enable interrupt mode
+    
+    sleep_enable();                                  // enable the sleep mode ready for use
+    sleep_mode();                                    // trigger the sleep    
+    sleep_disable();                                 // prevent further sleeps
+
     return 0;
   }
   
@@ -130,4 +150,17 @@ int processMessage(String *newMessage){
  */
 void cleanString(String *string){
   *string = "";
+}
+
+/* 
+ * This is a Interrupt Service Routine. This 'function' handles the
+ * watchdog timer.
+ * Parameters:
+ *  String *newMessage = pointer for the received message.
+ */
+ISR(WDT_vect){
+  // Show that we handle the interruption from watchdog.
+  Serial.println("Wake up again!");
+  // Disable the watchdog timer.
+  wdt_disable();
 }
