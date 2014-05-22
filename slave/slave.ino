@@ -31,7 +31,8 @@
 void setup();
 void loop();
 void initializeSlave();
-void processMessage(String *newMessage);
+void cleanString(String *string);
+int processMessage(String *newMessage);
 
 
 
@@ -59,7 +60,9 @@ void loop(){
   
   // If a message arrive, then process it.
   if(message != ""){
-    processMessage(&message);
+    if(processMessage(&message) != 0){
+      Serial.println("Error! Message not recognized.");
+    }
   }
 }
 
@@ -83,9 +86,48 @@ void initializeSlave(){
  * Parameters:
  *  String *newMessage = pointer for the received message.
  */
-void processMessage(String *newMessage){
-  // Simple example to what to do with the Received String.
-  Serial.print("Received: ");
-  Serial.println(*newMessage);
-  *newMessage = "";
+int processMessage(String *newMessage){
+  
+  // Verify if the message is a Request to Sleep.
+  if(*newMessage == "req_sleepm"){
+    Serial.print("Received: ");
+    Serial.println(*newMessage);
+    cleanString(newMessage);
+    // Notify the Master the reception of a sleep message.
+    // The slave should sleep here.
+    return 0;
+  }
+  
+  // Verify if the message is a Request Status.
+  if(*newMessage == "req_status"){
+    Serial.print("Received: ");
+    Serial.println(*newMessage);
+    cleanString(newMessage);
+    // The slave needs to get the sensor values here.
+    // The slave should send its status to the Master here.
+    return 0;
+  }
+  
+  // Verify if the message is a Request to configure.
+  if(*newMessage == "req_reconf"){
+    Serial.print("Received: ");
+    Serial.println(*newMessage);
+    cleanString(newMessage);
+    // Notify the Master about the reception of a reconfigure message.
+    // The slave should reconfigure here.
+    return 0;
+  }
+  
+  // If the message do not fit in earlier cases, indicates an error.
+  cleanString(newMessage);
+  return 1;
+}
+
+/* 
+ * This funcion clean the content of a string.
+ * Parameters:
+ *  String *newMessage = pointer for the received message.
+ */
+void cleanString(String *string){
+  *string = "";
 }
