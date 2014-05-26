@@ -28,6 +28,10 @@
       '1': Watchdog timer (no hardware setup required).
       '2': Interruption timer (Connect a 220 Ohm resistor between di-
            gital pin 0 (RX) and the digital pin 2 (INT0)).
+
+    XB_OR_MON Usage:
+      '1': XBee communication.
+      '2': Serial Monitor communication.
 */
 
 
@@ -51,6 +55,8 @@ void sleepMode();
 void getTemperature(float *temperature);
 void getBattVoltage(long *battVoltage);
 void cleanString(String *string);
+void monitorPrint(boolean newLine, String string);
+void xBeeModPrint(boolean newLine, String string);
 void waitFor(long time);
 ISR(WDT_vect);
 void pinInterrupt();
@@ -59,6 +65,7 @@ void pinInterrupt();
 
 /* ######## Definitions ######## */
 #define WD_OR_INT 1
+#define XB_OR_MON 1
 
 
 
@@ -75,13 +82,15 @@ void setup(){
   
   // Verify the value of WD_OR_INT.
   if(WD_OR_INT == 1){
-    Serial.print("Watchdog-Guided Program Initializing... ");
+    if(XB_OR_MON == 2){
+      monitorPrint(false, "Watchdog-Guided Program Initializing... ");
+    }
   }
   if(WD_OR_INT == 2){
-    Serial.print("Interruption-Guided Program Initializing... ");
+    monitorPrint(false, "Interruption-Guided Program Initializing... ");
   }
   
-  Serial.println("Complete!");
+  monitorPrint(true, "Complete!");
 }
 
 void loop(){
@@ -94,7 +103,7 @@ void loop(){
   // If a message arrive, then process it.
   if(message != ""){
     if(processMessage(&message) != 0){
-      Serial.println("Error! Message not recognized.");
+      monitorPrint(true, "Error! Message not recognized.");
     }
   }
 }
@@ -159,9 +168,14 @@ int processMessage(String *newMessage){
   // Verify if the message is a Request to Sleep.
   if(*newMessage == "req_sleepm"){
     // Notify the Master the reception of a sleep message.
-    Serial.print("Received: ");
-    Serial.println(*newMessage);
-    Serial.println("  zzZ ... zzZ ... zzZ ");
+    // Serial Monitor prints.
+    monitorPrint(false, "Received: ");
+    monitorPrint(true, *newMessage);
+    monitorPrint(true, "  zzZ ... zzZ ... zzZ ");
+    
+    // XBee Module prints.
+    xBeeModPrint(true, "Ok");
+    
     Serial.flush();
     cleanString(newMessage);    
     
@@ -173,43 +187,55 @@ int processMessage(String *newMessage){
   
   // Verify if the message is a Request Status.
   if(*newMessage == "req_status"){
-    Serial.print("Received: ");
-    Serial.println(*newMessage);
+    // Serial Monitor prints.
+    monitorPrint(false, "Received: ");
+    monitorPrint(true, *newMessage);
+    Serial.flush();
     cleanString(newMessage);
     
     // The slave needs to get the sensor values here.
     float sensor_t; // Temperature.
     long sensor_b; // Batery Voltage.
+    char temporary[10];
     getTemperature(&sensor_t);
     getBattVoltage(&sensor_b);
-    Serial.print("  Temperature (*C): ");
-    Serial.println(sensor_t);
-    Serial.print("  Battery Voltage (mV): ");
-    Serial.println(sensor_b, DEC);
     
     // The slave should send its status to the Master here.
-    Serial.print("  Sending data to the Master...");
-    // Send code here...
-    Serial.println(" OK!");
+    // Serial Monitor and XBee Module prints.
+    monitorPrint(false, "  Temperature (*C): ");
+    dtostrf(sensor_t,6,2,temporary);
+    monitorPrint(true, temporary);
+    xBeeModPrint(false, temporary);
+    xBeeModPrint(false, ":");
+    
+    monitorPrint(false, "  Battery Voltage (mV): ");
+    dtostrf(sensor_b,7,1,temporary);
+    monitorPrint(true, temporary);
+    xBeeModPrint(true, temporary);
+    
+    monitorPrint(false, "  Sending data to the Master...");
+    monitorPrint(true, " OK!");
     
     return 0;
   }
   
   // Verify if the message is a Request to configure.
   if(*newMessage == "req_reconf"){
-    Serial.print("Received: ");
-    Serial.println(*newMessage);
+    // Serial Monitor prints.
+    monitorPrint(false, "Received: ");
+    monitorPrint(true, *newMessage);
+    Serial.flush();
     cleanString(newMessage);
     
     // The slave should reconfigure here.
-    Serial.print("  Reconfiguring...");
+    monitorPrint(false, "  Reconfiguring...");
     // Reconfiguring code here...
-    Serial.println(" Done!");
+    monitorPrint(true, " Done!");
 
     // Notify the Master about the reception of a reconfigure message.
-    Serial.print("  Sending ack to the Master...");
-    // Send code here...
-    Serial.println(" OK!");
+    monitorPrint(false, "  Sending ack to the Master...");
+    xBeeModPrint(true, "Ok");
+    monitorPrint(true, " OK!");
     
     return 0;
   }
@@ -281,6 +307,40 @@ void cleanString(String *string){
 }
 
 /* 
+ * This funcion prints a string into serial Monitor.
+ * Parameters:
+ *  boolean newLine = indicate if a new line is necessary.
+ *  String string = the string to be printed into monitor.
+ */
+void monitorPrint(boolean newLine, String string){
+  if(XB_OR_MON == 2){
+    if(newLine == false){
+      Serial.print(string);
+    }
+    else{
+      Serial.println(string);
+    }
+  }
+}
+
+/* 
+ * This funcion prints a string into XBee Module.
+ * Parameters:
+ *  boolean newLine = indicate if a new line is necessary.
+ *  String string = the string to be printed into monitor.
+ */
+void xBeeModPrint(boolean newLine, String string){
+  if(XB_OR_MON == 1){
+    if(newLine == false){
+      Serial.print(string);
+    }
+    else{
+      Serial.println(string);
+    }
+  }
+}
+
+/* 
  * This funcion waits for 'time' miliseconds (it does not do any-
  * thing in practice, just wait).
  * Parameters:
@@ -307,7 +367,7 @@ void waitFor(long time){
  */
 ISR(WDT_vect){
   // Show that we handle the interruption from watchdog.
-  Serial.println("  Waked up again!");
+  monitorPrint(true, "  Waked up again!");
   // Disable the watchdog timer.
   wdt_disable();
 }
@@ -320,6 +380,6 @@ ISR(WDT_vect){
  */
 void pinInterrupt(){
   // Show that we handle the interruption from pin 2.
-  Serial.println("  Waked up again!");
+  monitorPrint(true, "  Waked up again!");
   detachInterrupt(0);
 }
