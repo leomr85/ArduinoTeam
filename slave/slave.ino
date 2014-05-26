@@ -23,7 +23,11 @@
     This source code is for specific purpose and the authors do not
     guarantee it to work in other cases. As an open source code, its
     use is free, but please keep the main authors list in the header.
-      
+    
+    WD_OR_INT Usage:
+      '1': Watchdog timer (no hardware setup required).
+      '2': Interruption timer (Connect a 220 Ohm resistor between di-
+           gital pin 0 (RX) and the digital pin 2 (INT0)).
 */
 
 
@@ -37,28 +41,47 @@
 /* #### Functions Prototypes ### */
 void setup();
 void loop();
+
 void initializeSlave();
-void waitFor(long time);
-void cleanString(String *string);
+void initializeWatchdog();
+void initializeInterrupt();
+
+int processMessage(String *newMessage);
+void sleepMode();
 void getTemperature(float *temperature);
 void getBattVoltage(long *battVoltage);
-int processMessage(String *newMessage);
+void cleanString(String *string);
+void waitFor(long time);
+ISR(WDT_vect);
+void pinInterrupt();
 
 
 
 /* ######## Definitions ######## */
-#define SIZE 15
+#define WD_OR_INT 1
 
 
 
 /* ##### Global Variables ###### */
+int pin2;
 int byteIn;
 String message;
+
 
 
 /* ##### Arduino Functions ##### */
 void setup(){
   initializeSlave();
+  
+  // Verify the value of WD_OR_INT.
+  if(WD_OR_INT == 1){
+    Serial.print("Watchdog-Guided Program Initializing... ");
+  }
+  if(WD_OR_INT == 2){
+    Serial.print("Interruption-Guided Program Initializing... ");
+  }
+  
+  Serial.println("Complete!");
 }
 
 void loop(){
@@ -87,8 +110,43 @@ void loop(){
 void initializeSlave(){
   // Initialize the serial port at 9600 baud.
   Serial.begin(9600);
+  // Initialize variables.
+  pin2 = 2; // Digital pin #2.
+}
+
+/* 
+ * This function enables Watchdog (if it is necessary).
+ * No parameters.
+ *
+ */
+void initializeWatchdog(){
+  // Select the watchdog timer mode.
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  // Reset status flag.
+  MCUSR &= ~(1 << WDRF);
+  // Enable configuration changes.
+  WDTCSR |= (1 << WDCE) | (1 << WDE);
+  // Set the prescalar = 9 = 0b1001 (~8s).
+  WDTCSR = (1 << WDP0) | (0 << WDP1) | (0 << WDP2) | (1 << WDP3);
+  // Enable interrupt mode.
+  WDTCSR |= (1 << WDIE);
+}
+
+/* 
+ * This function enables Interruption at Pin 2 (if it is necessary).
+ * No parameters.
+ *
+ */
+void initializeInterrupt(){
+  // Set Pin 2 as input.
+  pinMode(pin2,INPUT);
+
+  /* Setup pin2 as an interrupt and attach handler. */
+  attachInterrupt(0, pinInterrupt, LOW);
+  waitFor(5);
   
-  // Set pins to transmit/receive data.
+  // Select the watchdog timer mode.
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 }
 
 /* 
@@ -108,20 +166,7 @@ int processMessage(String *newMessage){
     cleanString(newMessage);    
     
     // The slave should sleep here.
-    // Select the watchdog timer mode.
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-    // Reset status flag.
-    MCUSR &= ~(1 << WDRF);
-    // Enable configuration changes.
-    WDTCSR |= (1 << WDCE) | (1 << WDE);
-    // Set the prescalar = 9 = 0b1001 (~10s).
-    WDTCSR = (1 << WDP0) | (0 << WDP1) | (0 << WDP2) | (1 << WDP3);
-    // Enable interrupt mode.
-    WDTCSR |= (1 << WDIE);
-    
-    sleep_enable();
-    sleep_mode();    
-    sleep_disable();
+    sleepMode();
 
     return 0;
   }
@@ -175,12 +220,26 @@ int processMessage(String *newMessage){
 }
 
 /* 
- * This funcion clean the content of a string.
+ * This is a Sleep Routine. It sets the Watchdog and enable the node to sleep.
  * Parameters:
  *  String *newMessage = pointer for the received message.
  */
-void cleanString(String *string){
-  *string = "";
+void sleepMode(){
+  if(WD_OR_INT == 1){
+    initializeWatchdog();
+  }
+  if(WD_OR_INT == 2){
+    initializeInterrupt();
+    /* To wake up again the node, just send a character (e.g. "w") and then send a command.
+     * Ex: $ req_sleepm > this command puts the node to sleep.
+     *     $ w          > this command wakes up the node.
+     *     $ req_status > this command retrieves the node status.
+    */
+  }
+  
+  sleep_enable();
+  sleep_mode();
+  sleep_disable();
 }
 
 /* 
@@ -199,12 +258,10 @@ void getTemperature(float *temperature){
  *  float *battVoltage = pointer for the battery Voltage variable.
  */
 void getBattVoltage(long *battVoltage){
-  // Read the battery voltage sensor value.
-  
   // Read 1.1V reference against AVcc
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
   // Wait for Vref to settle.
-  waitFor(2);
+  waitFor(5);
   // Convert
   ADCSRA |= _BV(ADSC);
   while (bit_is_set(ADCSRA,ADSC));
@@ -215,12 +272,23 @@ void getBattVoltage(long *battVoltage){
 }
 
 /* 
- * This funcion waits for 'time' miliseconds (it does not do anything in practice, just wait).
+ * This funcion clean the content of a string.
+ * Parameters:
+ *  String *newMessage = pointer for the received message.
+ */
+void cleanString(String *string){
+  *string = "";
+}
+
+/* 
+ * This funcion waits for 'time' miliseconds (it does not do any-
+ * thing in practice, just wait).
  * Parameters:
  *  long time = the time (in ms) that the function should wait.
  */
 void waitFor(long time){
-  // millis function returns the number of milliseconds since the program started. 
+  // millis function returns the number of milliseconds since the
+  // program started. 
   
   // Create two variables: initial and end time.
   unsigned long ini_time = millis();
@@ -242,4 +310,16 @@ ISR(WDT_vect){
   Serial.println("  Waked up again!");
   // Disable the watchdog timer.
   wdt_disable();
+}
+
+/* 
+ * This is a Interrupt Service Routine. This 'function' handles the
+ * pin interruption by receiving serial data (RX).
+ * No parameters.
+ * 
+ */
+void pinInterrupt(){
+  // Show that we handle the interruption from pin 2.
+  Serial.println("  Waked up again!");
+  detachInterrupt(0);
 }
