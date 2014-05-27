@@ -71,7 +71,6 @@ void pinInterrupt();
 
 /* ##### Global Variables ###### */
 int pin2;
-int byteIn;
 String message;
 
 
@@ -97,7 +96,7 @@ void loop(){
   
   // Verify if there is 'something' in Serial.
   if (Serial.available() > 0){
-    message = Serial.readStringUntil('\n');
+    message = Serial.readStringUntil(' ');
   }
   
   // If a message arrive, then process it.
@@ -174,7 +173,7 @@ int processMessage(String *newMessage){
     monitorPrint(true, "  zzZ ... zzZ ... zzZ ");
     
     // XBee Module prints.
-    xBeeModPrint(true, "Ok");
+    xBeeModPrint(true, "Ok ");
     
     Serial.flush();
     cleanString(newMessage);    
@@ -234,7 +233,7 @@ int processMessage(String *newMessage){
 
     // Notify the Master about the reception of a reconfigure message.
     monitorPrint(false, "  Sending ack to the Master...");
-    xBeeModPrint(true, "Ok");
+    xBeeModPrint(true, "Ok ");
     monitorPrint(true, " OK!");
     
     return 0;
@@ -246,7 +245,8 @@ int processMessage(String *newMessage){
 }
 
 /* 
- * This is a Sleep Routine. It sets the Watchdog and enable the node to sleep.
+ * This is a Sleep Routine. It sets the Watchdog and enable the node
+ * to sleep.
  * Parameters:
  *  String *newMessage = pointer for the received message.
  */
@@ -256,7 +256,8 @@ void sleepMode(){
   }
   if(WD_OR_INT == 2){
     initializeInterrupt();
-    /* To wake up again the node, just send a character (e.g. "w") and then send a command.
+    /* To wake up again the node, just send a character (e.g. "w")
+     * and then send a command.
      * Ex: $ req_sleepm > this command puts the node to sleep.
      *     $ w          > this command wakes up the node.
      *     $ req_status > this command retrieves the node status.
@@ -266,6 +267,11 @@ void sleepMode(){
   sleep_enable();
   sleep_mode();
   sleep_disable();
+  
+  // Show that we handle the interruption (by the Watchdog or Rx).
+  monitorPrint(true, "  Waked up again!");
+  // Send a message to the Master: "I am ready to receive commands".
+  if(WD_OR_INT == 2)  xBeeModPrint(true, "ready ");
 }
 
 /* 
@@ -366,8 +372,6 @@ void waitFor(long time){
  *  String *newMessage = pointer for the received message.
  */
 ISR(WDT_vect){
-  // Show that we handle the interruption from watchdog.
-  monitorPrint(true, "  Waked up again!");
   // Disable the watchdog timer.
   wdt_disable();
 }
@@ -380,6 +384,5 @@ ISR(WDT_vect){
  */
 void pinInterrupt(){
   // Show that we handle the interruption from pin 2.
-  monitorPrint(true, "  Waked up again!");
   detachInterrupt(0);
 }

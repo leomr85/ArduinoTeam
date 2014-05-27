@@ -36,6 +36,7 @@ void setup();
 void loop();
 void initializeMaster();
 void processReceivedData();
+void waitFor(long time);
 
 
 
@@ -44,6 +45,7 @@ void processReceivedData();
 
 
 /* ##### Global Variables ###### */
+String message;
 
 
 
@@ -53,7 +55,25 @@ void setup(){
 }
 
 void loop(){
+  // Send a message to the Slave.
+  Serial.print("req_reconf ");
   
+  // Wait for an Ack. In this case, an "Ok ".
+  if (Serial.available() > 0){
+    message = Serial.readStringUntil(' ');
+  }
+  
+  // If the Ack was received, do something!
+  if(message != ""){
+    // In this case, the master only prints the message.
+    Serial.println(message);
+  }
+  else{
+    Serial.println();
+  }
+  
+  // Wait a little bit to send a new message.
+  waitFor(3000);
 }
 
 
@@ -73,4 +93,23 @@ void initializeMaster(){
 
 void processReceivedData(){
   // Do something with the data: Fusion/Aggregation
+}
+
+/* 
+ * This funcion waits for 'time' miliseconds (it does not do any-
+ * thing in practice, just wait).
+ * Parameters:
+ *  long time = the time (in ms) that the function should wait.
+ */
+void waitFor(long time){
+  // millis function returns the number of milliseconds since the
+  // program started. 
+  
+  // Create two variables: initial and end time.
+  unsigned long ini_time = millis();
+  unsigned long end_time = ini_time;
+  
+  while(end_time - ini_time <= time){
+    end_time = millis();
+  }
 }
