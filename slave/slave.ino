@@ -65,7 +65,7 @@ void pinInterrupt();
 
 /* ######## Definitions ######## */
 #define WD_OR_INT 1
-#define XB_OR_MON 1
+#define XB_OR_MON 2
 
 
 
