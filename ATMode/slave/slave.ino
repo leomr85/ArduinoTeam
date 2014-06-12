@@ -22,7 +22,7 @@
 
     This source code is for specific purpose and the authors do not
     guarantee it to work in other cases. As an open source code, its
-    use is free, but please keep the main authors list in the header.
+    use is free. Please keep the main authors list in the header.
     
     WD_OR_INT Usage:
       '1': Watchdog timer (no hardware setup required).
@@ -65,7 +65,7 @@ void pinInterrupt();
 
 /* ######## Definitions ######## */
 #define WD_OR_INT 1
-#define XB_OR_MON 1
+#define XB_OR_MON 2
 
 
 

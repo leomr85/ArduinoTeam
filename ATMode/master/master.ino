@@ -22,7 +22,7 @@
 
     This source code is for specific purpose and the authors do not
     guarantee it to work in other cases. As an open source code, its
-    use is free, but please keep the main authors list in the header.
+    use is free. Please keep the main authors list in the header.
       
 */
 
@@ -37,6 +37,8 @@ void loop();
 void initializeMaster();
 void processReceivedData();
 void waitFor(long time);
+void cleanString(String *string);
+int identifySlaves();
 
 
 
@@ -46,6 +48,7 @@ void waitFor(long time);
 
 /* ##### Global Variables ###### */
 String message;
+int slavesCounter;
 
 
 
@@ -55,6 +58,10 @@ void setup(){
 }
 
 void loop(){
+  // Discover Slaves in the neighborhood.
+//  slavesCounter = identifySlaves();
+//  Serial.println(slavesCounter, DEC);
+  
   // Send a message to the Slave.
   Serial.print("req_reconf ");
   
@@ -81,7 +88,8 @@ void loop(){
 /* ###### Other Functions ###### */
 
 /* 
- * This funcion initialize the things that are necessary to the Master.
+ * This funcion initialize the things that are necessary to the Mas-
+ * ter.
  * No parameters.
  */
 void initializeMaster(){
@@ -89,8 +97,44 @@ void initializeMaster(){
   Serial.begin(9600);
   
   // Set pins to transmit/receive data.
+  slavesCounter = 0;
 }
 
+/* 
+ * This function identifies how many slaves the master can communi-
+ * cate.
+ * No parameters.
+ * Return: the number of slaves with success communication.
+ */
+int identifySlaves(){
+  String incomingMessage;
+  int numberOfSlaves = 0;
+  long time = 2000;
+  unsigned long ini_time = millis();
+  unsigned long end_time = ini_time;
+  
+  // Send a message to the Slaves.
+  Serial.print("req_reconf ");
+  
+  // Wait for Slaves' Acks.
+  while(end_time - ini_time <= time){
+    if (Serial.available() > 0){
+      incomingMessage = Serial.readStringUntil(' ');
+      if(incomingMessage == "Ok"){
+        numberOfSlaves++;
+        cleanString(&incomingMessage);
+      }
+    }
+    end_time = millis();
+  }
+  return numberOfSlaves;  
+}
+
+/* 
+ * This funcion process the received data (Fusion/Aggregation).
+ * No parameters.
+ * 
+ */
 void processReceivedData(){
   // Do something with the data: Fusion/Aggregation
 }
@@ -112,4 +156,13 @@ void waitFor(long time){
   while(end_time - ini_time <= time){
     end_time = millis();
   }
+}
+
+/* 
+ * This funcion clean the content of a string.
+ * Parameters:
+ *  String *newMessage = pointer for the received message.
+ */
+void cleanString(String *string){
+  *string = "";
 }
