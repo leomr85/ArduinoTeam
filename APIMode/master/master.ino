@@ -39,11 +39,12 @@
 
 
 /* ######## Definitions ######## */
-#define LEN 15
+#define LEN 18
 
 
 
 /* ##### Global Variables ###### */
+char messageReceived[20];
 
 
 
@@ -53,13 +54,34 @@ void setup(){
 }
 
 void loop(){
+  int index = 0;
+  
+  // Reading and interpreting the received message.
   if(Serial.available() > LEN){
-    for(int i=0; i <= LEN; i++){
-      Serial.print(Serial.read(), HEX);
-      Serial.print(" ");
+    for(int i = 0; i <= LEN; i++){
+      // The position 14 is the beggining of the payload.
+      // LEN - 1 is to discard the checksum byte.
+      if((i >= 14) && (i <= LEN-1)){
+        messageReceived[index] = Serial.read();
+        Serial.print(messageReceived[index], HEX);
+        Serial.print(' ');
+        index++;
+      }
+      else{
+        // Print the frame content.
+        Serial.print(Serial.read(), HEX);
+        Serial.print(" ");
+      }
     }
     Serial.println();
+    
+    // Print the message in the payload.
+    Serial.print("Received: ");
+    Serial.println(messageReceived);
   }
+  
+    
+  
 }
 
 

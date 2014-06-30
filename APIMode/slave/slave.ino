@@ -37,17 +37,18 @@
 /* #### Functions Prototypes ### */
 void setup();
 void loop();
-void txRequest();
-void workingExample();
+void txRequest(String* message);
 void waitFor(long time);
 
 
 
 /* ######## Definitions ######## */
+#define CHARHEX (sizeof(char) * 5)
 
 
 
 /* ##### Global Variables ###### */
+String message = "";
 
 
 
@@ -57,8 +58,12 @@ void setup(){
 }
 
 void loop(){
-  waitFor(2000);  
-  txRequest();
+  
+  // Requisition to enter in Sleep Mode.
+  message = "r_st";
+  txRequest(&message);
+  waitFor(2000);
+  
 }
 
 
@@ -72,7 +77,8 @@ void loop(){
  * No parameters.
  * 
  */
-void txRequest(){
+void txRequest(String* message){
+  
   // Creating a struct to handle the frame.
   typedef struct txRequest{
     byte startByte;
@@ -83,7 +89,7 @@ void txRequest(){
     byte destAddrMSB;
     byte destAddrLSB;
     byte options;
-    byte payload;
+    byte payload[(sizeof(byte) * 20)];
     byte checksum;
   }txReq;
   
@@ -96,7 +102,7 @@ void txRequest(){
   // Lenght (bytes 2 and 3).
     // Note: MSB first, LSB last.
   frame.lengthMSB = 0x00;
-  frame.lengthLSB = 0x06;
+  frame.lengthLSB = 0x05 + (byte)(*message).length();
   
   // Frame type (byte 4).
   frame.frameType = 0x01;
@@ -118,17 +124,53 @@ void txRequest(){
 
   // RF Data (Bytes 9 -> n).
     // Note: Up to 100 bytes per packet.
-  frame.payload = 0x48;
+    // Get the 'message' content and convert to byte.
+  (*message).getBytes(frame.payload,sizeof(frame.payload));
   
   // Checksum.
     // Note: To calculate, do not include frame delimiter and length.
-  long sum = 0x01 + 0xFF + 0xFF + 0x01 + 0x48;
-  frame.checksum = 0xFF - (sum & 0xFF);
+    // Summing frame values, EXCEPT the values into message string.
+    // It will be done below.
+  long sum = 0x01 + 0xFF + 0xFF + 0x01;
   /* ################################################ */
   
-  int bufferLength = sizeof(frame);
-  byte buffer[] = {frame.startByte, frame.lengthMSB, frame.lengthLSB, frame.frameType, frame.frameID, frame.destAddrMSB, frame.destAddrLSB, frame.options, frame.payload, frame.checksum};
+  int i = 0, j = 0;
+  // Build the frame 'packet' to send.
+    // Note: There are 9 fields + the length of 'message' string.
+  int bufferLength = 9 + (*message).length();
+  byte buffer[bufferLength];
+  
+  // Fill 'buffer' fields.
+  buffer[0] = frame.startByte;
+  buffer[1] = frame.lengthMSB;
+  buffer[2] = frame.lengthLSB;
+  buffer[3] = frame.frameType;
+  buffer[4] = frame.frameID;
+  buffer[5] = frame.destAddrMSB;
+  buffer[6] = frame.destAddrLSB;
+  buffer[7] = frame.options;
+  j = 8;
+    // Fill 'buffer' with respect to 'message' payload.
+  for(i=0;frame.payload[i] != '\0'; i++){
+    buffer[j] = frame.payload[i];
+    // Sum the value into 'sum'.
+    sum = sum + buffer[j];
+    j++;
+  }
+  
+  // Do final checksum math.
+  frame.checksum = 0xFF - (sum & 0xFF);
+  buffer[j++] = frame.checksum;
+  buffer[j++] = '\0'; // Indicates the buffer end.
+  
   Serial.write(buffer, bufferLength);
+  
+//  // For tests only (Serial Monitor).
+//  for(j=0;j < bufferLength; j++){
+//    Serial.print(buffer[j],HEX);
+//    Serial.print(' ');
+//  }
+//  Serial.println();
 }
 
 /* 
