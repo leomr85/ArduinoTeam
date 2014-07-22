@@ -1,0 +1,16 @@
+XBeeLib					KEYWORD1
+helloWorld				KEYWORD2
+waitFor					KEYWORD2
+txRequest				KEYWORD2
+rxPacket				KEYWORD2
+getStatus				KEYWORD2
+getBattVoltage			KEYWORD2
+setPayload				KEYWORD2
+getPayload				KEYWORD2
+getPayloadAddress		KEYWORD2
+setReceived				KEYWORD2
+addReceived				KEYWORD2
+clearReceived			KEYWORD2
+getReceived				KEYWORD2
+getCoordinatorEnabled	KEYWORD2
+setCoordinatorEnabled	KEYWORD2

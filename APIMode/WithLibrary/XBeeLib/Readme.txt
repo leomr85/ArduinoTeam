@@ -1,0 +1,3 @@
+This folder needs to be dropped into Arduino Library Directory. To do so:
+1) Sketch > Import Library > Add Library...
+2) If necessary the library does not appear in the list, close and reopen Arduino's IDE.
